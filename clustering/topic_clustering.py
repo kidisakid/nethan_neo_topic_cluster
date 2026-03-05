@@ -10,6 +10,7 @@ import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.decomposition import PCA
 from tqdm import tqdm
 import warnings
 import re
@@ -257,6 +258,80 @@ class TopicClusterer:
         # Convert to distances (1 - similarity)
         distances = 1 - similarities
         return distances
+    
+    def get_2d_coordinates(self, texts: Optional[List[str]] = None) -> Tuple[np.ndarray, np.ndarray]:
+        """
+        Get 2D coordinates using PCA for visualization.
+        
+        Args:
+            texts (Optional[List[str]]): Text data for 2D projection. If None, uses training data.
+            
+        Returns:
+            Tuple[np.ndarray, np.ndarray]: 2D coordinates and cluster labels
+            
+        Raises:
+            ValueError: If the model has not been fitted yet
+        """
+        if self.tfidf_matrix is None or self.kmeans is None:
+            raise ValueError("Model must be fitted first. Call fit() first.")
+        
+        # Get TF-IDF vectors
+        if texts is not None:
+            processed_texts = self._preprocess_text(texts)
+            tfidf_vectors = self.vectorizer.transform(processed_texts)
+            clusters = self.kmeans.predict(tfidf_vectors)
+        else:
+            tfidf_vectors = self.tfidf_matrix
+            clusters = self.kmeans.labels_
+        
+        # Apply PCA to reduce to 2D
+        pca = PCA(n_components=2, random_state=self.random_state)
+        coordinates_2d = pca.fit_transform(tfidf_vectors.toarray())
+        
+        return coordinates_2d, clusters
+    
+    def get_top_terms_matrix(self, n_terms: int = 10) -> pd.DataFrame:
+        """
+        Get top terms for each cluster as a DataFrame for heatmap visualization.
+        
+        Args:
+            n_terms (int): Number of top terms per cluster (default: 10)
+            
+        Returns:
+            pd.DataFrame: DataFrame with clusters as rows and terms as columns, values are term importance
+            
+        Raises:
+            ValueError: If the model has not been fitted yet
+        """
+        if self.kmeans is None or self.feature_names is None:
+            raise ValueError("Model must be fitted first. Call fit() first.")
+        
+        cluster_centers = self.kmeans.cluster_centers_
+        
+        # Collect all top terms and their importance scores
+        term_scores = {}
+        
+        for cluster_id in range(self.n_clusters):
+            center = cluster_centers[cluster_id]
+            top_indices = center.argsort()[-n_terms:][::-1]
+            
+            for rank, idx in enumerate(top_indices):
+                term = self.feature_names[idx]
+                score = center[idx]
+                
+                if term not in term_scores:
+                    term_scores[term] = {}
+                
+                term_scores[term][cluster_id] = score
+        
+        # Create DataFrame
+        df_terms = pd.DataFrame(term_scores).fillna(0).T
+        
+        # Reorder columns to match cluster order
+        columns_order = [col for col in range(self.n_clusters) if col in df_terms.columns]
+        df_terms = df_terms[[col for col in columns_order if col in df_terms.columns]]
+        
+        return df_terms
 
 
 def perform_topic_clustering(

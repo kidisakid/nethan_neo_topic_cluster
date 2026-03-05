@@ -12,6 +12,8 @@ import numpy as np
 from io import BytesIO
 import sys
 from pathlib import Path
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 # Add clustering module to path
 try:
@@ -372,6 +374,124 @@ def display_clustering_results(result_df, top_terms, distances, n_clusters):
     st.dataframe(filtered_df, use_container_width=True)
 
 
+def display_cluster_visualizations(clusterer, result_df, text_column, n_clusters):
+    """Display interactive cluster visualizations."""
+    st.markdown('<div class="section-header">📈 Cluster Visualizations</div>', unsafe_allow_html=True)
+    
+    if clusterer is None:
+        st.warning("No clustering data available for visualization.")
+        return
+    
+    # 2D Cluster Scatter Plot using PCA
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("**Cluster Distribution (2D PCA Projection)**")
+        
+        try:
+            # Get 2D coordinates
+            texts = result_df[text_column].tolist()
+            coordinates_2d, clusters = clusterer.get_2d_coordinates(texts)
+            
+            # Create scatter plot
+            fig, ax = plt.subplots(figsize=(10, 7))
+            
+            # Create color map
+            colors = plt.cm.get_cmap('tab20')(np.linspace(0, 1, n_clusters))
+            
+            for cluster_id in range(n_clusters):
+                mask = clusters == cluster_id
+                ax.scatter(
+                    coordinates_2d[mask, 0],
+                    coordinates_2d[mask, 1],
+                    c=[colors[cluster_id]],
+                    label=f'Cluster {cluster_id}',
+                    alpha=0.6,
+                    s=100,
+                    edgecolors='black',
+                    linewidth=0.5
+                )
+            
+            ax.set_xlabel('First Principal Component', fontsize=12)
+            ax.set_ylabel('Second Principal Component', fontsize=12)
+            ax.set_title('Cluster Distribution (PCA Projection)', fontsize=14, fontweight='bold')
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=9)
+            ax.grid(True, alpha=0.3)
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        
+        except Exception as e:
+            st.error(f"Error creating 2D visualization: {str(e)}")
+    
+    with col2:
+        st.markdown("**Cluster Size Distribution**")
+        
+        try:
+            # Get cluster counts
+            cluster_counts = result_df['Cluster'].value_counts().sort_index()
+            
+            # Create pie chart
+            fig, ax = plt.subplots(figsize=(10, 7))
+            
+            colors_pie = plt.cm.get_cmap('tab20')(np.linspace(0, 1, n_clusters))
+            wedges, texts, autotexts = ax.pie(
+                cluster_counts,
+                labels=[f'Cluster {i}' for i in cluster_counts.index],
+                autopct='%1.1f%%',
+                colors=colors_pie[:len(cluster_counts)],
+                startangle=90,
+                textprops={'fontsize': 10}
+            )
+            
+            # Enhance autotext
+            for autotext in autotexts:
+                autotext.set_color('white')
+                autotext.set_fontweight('bold')
+                autotext.set_fontsize(9)
+            
+            ax.set_title('Cluster Size Distribution', fontsize=14, fontweight='bold')
+            
+            plt.tight_layout()
+            st.pyplot(fig)
+        
+        except Exception as e:
+            st.error(f"Error creating pie chart: {str(e)}")
+    
+    st.divider()
+    
+    # Top Terms Heatmap
+    st.markdown("**Top Terms Heatmap per Cluster**")
+    
+    try:
+        # Get top terms as DataFrame
+        terms_df = clusterer.get_top_terms_matrix(n_terms=8)
+        
+        # Create heatmap
+        fig, ax = plt.subplots(figsize=(12, max(6, len(terms_df) * 0.3)))
+        
+        sns.heatmap(
+            terms_df,
+            annot=True,
+            fmt='.2f',
+            cmap='YlOrRd',
+            ax=ax,
+            cbar_kws={'label': 'Term Importance Score'},
+            linewidths=0.5,
+            linecolor='gray'
+        )
+        
+        ax.set_xlabel('Cluster', fontsize=12, fontweight='bold')
+        ax.set_ylabel('Terms', fontsize=12, fontweight='bold')
+        ax.set_title('Top Terms Importance by Cluster', fontsize=14, fontweight='bold')
+        
+        plt.tight_layout()
+        st.pyplot(fig)
+    
+    except Exception as e:
+        st.error(f"Error creating heatmap: {str(e)}")
+
+
 def display_detailed_analysis(clusterer, result_df):
     """Display detailed cluster analysis."""
     st.markdown('<div class="section-header">🔬 Detailed Cluster Analysis</div>', unsafe_allow_html=True)
@@ -480,6 +600,9 @@ def main():
                     # Display results
                     display_clustering_results(result_df, top_terms, distances, params['n_clusters'])
                     
+                    # Display visualizations
+                    display_cluster_visualizations(st.session_state.clusterer, result_df, text_column, params['n_clusters'])
+                    
                     # Detailed analysis
                     display_detailed_analysis(st.session_state.clusterer, result_df)
                     
@@ -496,6 +619,7 @@ def main():
                 distances = clusterer.get_cluster_distances(result_df[text_column].tolist())
                 
                 display_clustering_results(result_df, top_terms, distances, params['n_clusters'])
+                display_cluster_visualizations(clusterer, result_df, text_column, params['n_clusters'])
                 display_detailed_analysis(clusterer, result_df)
                 display_download_section(result_df)
     
