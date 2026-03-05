@@ -605,7 +605,6 @@ def display_download_section(df):
     if df is None or df.empty:
         return
     
-<<<<<<< HEAD
     st.markdown('<div class="section-header">💾 Download Results</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -640,18 +639,6 @@ def display_footer():
     **Topic Clustering Application** | Built with Streamlit, Scikit-learn, and Pandas
     """)
 
-=======
-    csv = df.to_csv(index=False)
-    st.download_button(
-        label="Download as CSV",
-        data=csv,
-        file_name="clustered_data.csv",
-        mime="text/csv",
-        help="Download the clustered data as CSV",
-        use_container_width=True,
-        type="primary"
-    )
->>>>>>> 85c519e1d3d1983f171554bfb661bd9ecc4bc58a
 
 def main():
     """Main application function."""
