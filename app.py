@@ -605,39 +605,16 @@ def display_download_section(df):
     if df is None or df.empty:
         return
     
-    st.markdown('<div class="section-header">💾 Download Results</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="Download as CSV",
-            data=csv,
-            file_name="clustered_data.csv",
-            mime="text/csv",
-            help="Download the clustered data as CSV"
-        )
-    
-    with col2:
-        excel_buffer = BytesIO()
-        df.to_excel(excel_buffer, index=False, engine='openpyxl')
-        excel_buffer.seek(0)
-        st.download_button(
-            label="Download as Excel",
-            data=excel_buffer,
-            file_name="clustered_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Download the clustered data as Excel"
-        )
-
-
-def display_footer():
-    """Display application footer."""
-    st.markdown("""
-    ---
-    **Topic Clustering Application** | Built with Streamlit, Scikit-learn, and Pandas
-    """)
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download as CSV",
+        data=csv,
+        file_name="clustered_data.csv",
+        mime="text/csv",
+        help="Download the clustered data as CSV",
+        use_container_width=True,
+        type="primary"
+    )
 
 
 def main():
