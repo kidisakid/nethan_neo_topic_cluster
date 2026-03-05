@@ -445,7 +445,6 @@ def display_download_section(df):
 
 def display_footer():
     """Display application footer."""
-    st.divider()
     st.markdown("""
     ---
     **Topic Clustering Application** | Built with Streamlit, Scikit-learn, and Pandas
