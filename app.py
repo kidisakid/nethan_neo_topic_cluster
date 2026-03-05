@@ -9,9 +9,6 @@ analyze topic clusters.
 import streamlit as st
 import pandas as pd
 import numpy as np
-from io import BytesIO
-import sys
-from pathlib import Path
 
 # Add clustering module to path
 try:
@@ -25,7 +22,7 @@ except ImportError:
 st.set_page_config(
     page_title="Topic Clustering",
     page_icon="🔍",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
 )
 
@@ -36,13 +33,11 @@ st.markdown("""
         color: #1f77b4;
         font-size: 2.5em;
         font-weight: bold;
-        margin-bottom: 10px;
     }
     .section-header {
         color: #2ca02c;
         font-size: 1.5em;
         font-weight: bold;
-        margin-top: 20px;
         margin-bottom: 10px;
     }
     .info-box {
@@ -147,22 +142,42 @@ def load_data(uploaded_file):
 
 def display_header():
     """Display application header."""
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown('<div class="main-header">🔍 Topic Clustering Application</div>', unsafe_allow_html=True)
-    with col2:
-        st.image("https://img.icons8.com/color/96/000000/cluster.png", width=80)
-    
-    st.markdown("""
-    Cluster text data into topics using **TF-IDF vectorization** and **K-Means clustering**.
-    Upload a CSV/Excel file, select a text column, configure parameters, and analyze topics.
-    """)
-    st.divider()
+    st.markdown('<div class="main-header">🔍 Topic Clustering Application</div>', unsafe_allow_html=True)
 
 
 def display_file_upload_section():
     """Display file upload section."""
     st.markdown('<div class="section-header">📁 Data Upload</div>', unsafe_allow_html=True)
+    
+    # Add card CSS
+    st.markdown("""
+    <style>
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(31, 119, 180, 0.08);
+            text-align: center;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .metric-card-label {
+            font-size: 0.72em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .metric-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #1f77b4;
+            line-height: 1.1;
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     uploaded_file = st.file_uploader(
         "Upload a CSV or Excel file",
@@ -176,13 +191,21 @@ def display_file_upload_section():
             st.session_state.df_original = df
             st.markdown('<div class="success-box">✅ File loaded successfully!</div>', unsafe_allow_html=True)
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2, gap="medium")
             with col1:
-                st.metric("Rows", len(df))
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">Rows</div>
+                    <div class="metric-card-value">{len(df):,}</div>
+                </div>
+                """, unsafe_allow_html=True)
             with col2:
-                st.metric("Columns", len(df.columns))
-            with col3:
-                st.metric("File Size", f"{uploaded_file.size / 1024:.1f} KB")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">Columns</div>
+                    <div class="metric-card-value">{len(df.columns):,}</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             st.markdown("**Preview:**")
             st.dataframe(df.head(10), use_container_width=True)
@@ -327,6 +350,7 @@ def perform_clustering(df, text_column, params):
 
 def display_clustering_results(result_df, top_terms, distances, n_clusters):
     """Display clustering results."""
+    st.divider()
     st.markdown('<div class="section-header">📊 Clustering Results</div>', unsafe_allow_html=True)
     
     # Cluster distribution
@@ -347,7 +371,7 @@ def display_clustering_results(result_df, top_terms, distances, n_clusters):
     st.divider()
     
     # Top terms per cluster
-    st.markdown("**Top Terms per Cluster:**")
+    st.markdown("### Top Terms per Cluster:")
     
     cols = st.columns(min(3, n_clusters))
     for cluster_id in range(n_clusters):
@@ -360,7 +384,7 @@ def display_clustering_results(result_df, top_terms, distances, n_clusters):
     st.divider()
     
     # Display clustered data
-    st.markdown("**Clustered Data Preview:**")
+    st.markdown("### Clustered Data Preview:")
     
     cluster_filter = st.multiselect(
         "Filter by cluster(s):",
@@ -416,40 +440,16 @@ def display_download_section(df):
     if df is None or df.empty:
         return
     
-    st.markdown('<div class="section-header">💾 Download Results</div>', unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        csv = df.to_csv(index=False)
-        st.download_button(
-            label="Download as CSV",
-            data=csv,
-            file_name="clustered_data.csv",
-            mime="text/csv",
-            help="Download the clustered data as CSV"
-        )
-    
-    with col2:
-        excel_buffer = BytesIO()
-        df.to_excel(excel_buffer, index=False, engine='openpyxl')
-        excel_buffer.seek(0)
-        st.download_button(
-            label="Download as Excel",
-            data=excel_buffer,
-            file_name="clustered_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            help="Download the clustered data as Excel"
-        )
-
-
-def display_footer():
-    """Display application footer."""
-    st.markdown("""
-    ---
-    **Topic Clustering Application** | Built with Streamlit, Scikit-learn, and Pandas
-    """)
-
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download as CSV",
+        data=csv,
+        file_name="clustered_data.csv",
+        mime="text/csv",
+        help="Download the clustered data as CSV",
+        use_container_width=True,
+        type="primary"
+    )
 
 def main():
     """Main application function."""
@@ -497,10 +497,6 @@ def main():
                 display_clustering_results(result_df, top_terms, distances, params['n_clusters'])
                 display_detailed_analysis(clusterer, result_df)
                 display_download_section(result_df)
-    
-    # Footer
-    display_footer()
-
 
 if __name__ == "__main__":
     main()
