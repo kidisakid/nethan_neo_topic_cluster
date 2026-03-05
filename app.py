@@ -27,7 +27,7 @@ except ImportError:
 st.set_page_config(
     page_title="Topic Clustering",
     page_icon="🔍",
-    layout="wide",
+    layout="centered",
     initial_sidebar_state="expanded",
 )
 
@@ -38,13 +38,11 @@ st.markdown("""
         color: #1f77b4;
         font-size: 2.5em;
         font-weight: bold;
-        margin-bottom: 10px;
     }
     .section-header {
         color: #2ca02c;
         font-size: 1.5em;
         font-weight: bold;
-        margin-top: 20px;
         margin-bottom: 10px;
     }
     .info-box {
@@ -53,6 +51,7 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 10px;
         border-left: 4px solid #1f77b4;
+        color: #1e293b;
     }
     .success-box {
         background-color: #d4edda;
@@ -60,6 +59,26 @@ st.markdown("""
         border-radius: 5px;
         margin-bottom: 10px;
         border-left: 4px solid #28a745;
+        color: #1e293b;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        .main-header {
+            color: #60a5fa;
+        }
+        .section-header {
+            color: #4ade80;
+        }
+        .info-box {
+            background-color: #1e2a3a;
+            border-left-color: #60a5fa;
+            color: #cbd5e1;
+        }
+        .success-box {
+            background-color: #14291e;
+            border-left-color: #4ade80;
+            color: #cbd5e1;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -149,22 +168,56 @@ def load_data(uploaded_file):
 
 def display_header():
     """Display application header."""
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        st.markdown('<div class="main-header">🔍 Topic Clustering Application</div>', unsafe_allow_html=True)
-    with col2:
-        st.image("https://img.icons8.com/color/96/000000/cluster.png", width=80)
-    
-    st.markdown("""
-    Cluster text data into topics using **TF-IDF vectorization** and **K-Means clustering**.
-    Upload a CSV/Excel file, select a text column, configure parameters, and analyze topics.
-    """)
-    st.divider()
+    st.markdown('<div class="main-header">CSV Topic Clustering</div>', unsafe_allow_html=True)
 
 
 def display_file_upload_section():
     """Display file upload section."""
-    st.markdown('<div class="section-header">📁 Data Upload</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-header">Data Upload</div>', unsafe_allow_html=True)
+    
+    #Metrics Cards CSS
+    st.markdown("""
+    <style>
+        .metric-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8faff 100%);
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 24px;
+            box-shadow: 0 2px 8px rgba(31, 119, 180, 0.08);
+            text-align: center;
+            margin-top: 1rem;
+            margin-bottom: 1rem;
+        }
+        .metric-card-label {
+            font-size: 0.72em;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #94a3b8;
+            margin-bottom: 8px;
+        }
+        .metric-card-value {
+            font-size: 2em;
+            font-weight: 700;
+            color: #1f77b4;
+            line-height: 1.1;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            .metric-card {
+                background: linear-gradient(135deg, #1e2530 0%, #1a2035 100%);
+                border: 1px solid #2d3748;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            }
+            .metric-card-label {
+                color: #64748b;
+            }
+            .metric-card-value {
+                color: #60a5fa;
+            }
+        }
+    </style>
+    """, unsafe_allow_html=True)
     
     uploaded_file = st.file_uploader(
         "Upload a CSV or Excel file",
@@ -178,13 +231,21 @@ def display_file_upload_section():
             st.session_state.df_original = df
             st.markdown('<div class="success-box">✅ File loaded successfully!</div>', unsafe_allow_html=True)
             
-            col1, col2, col3 = st.columns(3)
+            col1, col2 = st.columns(2, gap="medium")
             with col1:
-                st.metric("Rows", len(df))
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">Rows</div>
+                    <div class="metric-card-value">{len(df):,}</div>
+                </div>
+                """, unsafe_allow_html=True)
             with col2:
-                st.metric("Columns", len(df.columns))
-            with col3:
-                st.metric("File Size", f"{uploaded_file.size / 1024:.1f} KB")
+                st.markdown(f"""
+                <div class="metric-card">
+                    <div class="metric-card-label">Columns</div>
+                    <div class="metric-card-value">{len(df.columns):,}</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             st.markdown("**Preview:**")
             st.dataframe(df.head(10), use_container_width=True)
@@ -212,17 +273,24 @@ def display_column_selection(df):
     )
     
     # Display column statistics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Non-null values", df[selected_column].notna().sum())
-    with col2:
-        st.metric("Null values", df[selected_column].isna().sum())
-    with col3:
-        avg_length = df[selected_column].astype(str).str.len().mean()
-        st.metric("Avg text length", f"{int(avg_length)} chars")
+    avg_length = df[selected_column].astype(str).str.len().mean()
+    stats = [
+        ("Non-null values", f"{df[selected_column].notna().sum():,}"),
+        ("Null values",     f"{df[selected_column].isna().sum():,}"),
+        ("Avg text length", f"{int(avg_length)} chars"),
+    ]
+
+    col1, col2, col3 = st.columns(3, gap="medium")
+    for col, (label, value) in zip([col1, col2, col3], stats):
+        with col:
+            st.markdown(f"""
+            <div class="metric-card">
+                <div class="metric-card-label">{label}</div>
+                <div class="metric-card-value">{value}</div>
+            </div>
+            """, unsafe_allow_html=True)
     
     return selected_column
-
 
 def display_clustering_parameters():
     """Display clustering parameter configuration section."""
@@ -329,6 +397,7 @@ def perform_clustering(df, text_column, params):
 
 def display_clustering_results(result_df, top_terms, distances, n_clusters):
     """Display clustering results."""
+    st.divider()
     st.markdown('<div class="section-header">📊 Clustering Results</div>', unsafe_allow_html=True)
     
     # Cluster distribution
@@ -349,7 +418,7 @@ def display_clustering_results(result_df, top_terms, distances, n_clusters):
     st.divider()
     
     # Top terms per cluster
-    st.markdown("**Top Terms per Cluster:**")
+    st.markdown("### Top Terms per Cluster:")
     
     cols = st.columns(min(3, n_clusters))
     for cluster_id in range(n_clusters):
@@ -362,7 +431,7 @@ def display_clustering_results(result_df, top_terms, distances, n_clusters):
     st.divider()
     
     # Display clustered data
-    st.markdown("**Clustered Data Preview:**")
+    st.markdown("### Clustered Data Preview:")
     
     cluster_filter = st.multiselect(
         "Filter by cluster(s):",
@@ -536,6 +605,7 @@ def display_download_section(df):
     if df is None or df.empty:
         return
     
+<<<<<<< HEAD
     st.markdown('<div class="section-header">💾 Download Results</div>', unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
@@ -570,6 +640,18 @@ def display_footer():
     **Topic Clustering Application** | Built with Streamlit, Scikit-learn, and Pandas
     """)
 
+=======
+    csv = df.to_csv(index=False)
+    st.download_button(
+        label="Download as CSV",
+        data=csv,
+        file_name="clustered_data.csv",
+        mime="text/csv",
+        help="Download the clustered data as CSV",
+        use_container_width=True,
+        type="primary"
+    )
+>>>>>>> 85c519e1d3d1983f171554bfb661bd9ecc4bc58a
 
 def main():
     """Main application function."""
@@ -621,10 +703,6 @@ def main():
                 display_cluster_visualizations(clusterer, result_df, text_column, params['n_clusters'])
                 display_detailed_analysis(clusterer, result_df)
                 display_download_section(result_df)
-    
-    # Footer
-    display_footer()
-
 
 if __name__ == "__main__":
     main()
